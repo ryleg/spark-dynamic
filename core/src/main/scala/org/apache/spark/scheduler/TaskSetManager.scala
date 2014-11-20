@@ -472,7 +472,15 @@ private[spark] class TaskSetManager(
           // We used to log the time it takes to serialize the task, but task size is already
           // a good proxy to task serialization time.
           // val timeTaken = clock.getTime() - startTime
-          val taskName = s"task ${info.id} in stage ${taskSet.id}"
+          val userInt = if (
+            taskSet.properties.containsKey("spark.experimental.userInt")
+          )  taskSet.properties.getProperty("spark.experimental.userInt")
+          else "unassigned userint"
+
+          val taskName = s"task ${info.id} in stage ${taskSet.id} RYLE " +
+            s"- with taskSetProperties ${taskSet.properties} ${taskSet.properties.propertyNames()}" +
+            s"userInt:${userInt}" +
+            s"parentpoolname:${parent.poolName} "
           logInfo("Starting %s (TID %d, %s, %s, %d bytes)".format(
               taskName, taskId, host, taskLocality, serializedTask.limit))
 

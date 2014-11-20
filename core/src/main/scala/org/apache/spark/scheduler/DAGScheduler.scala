@@ -747,6 +747,7 @@ class DAGScheduler(
       logInfo("Final stage: " + finalStage + "(" + finalStage.name + ")")
       logInfo("Parents of final stage: " + finalStage.parents)
       logInfo("Missing parents: " + getMissingParentStages(finalStage))
+      logInfo("RYLE - DAGHandler - Are these the threadLocal properties? " + properties + " properties.stringPropertyNames() " + properties.stringPropertyNames())
       val shouldRunLocally =
         localExecutionEnabled && allowLocal && finalStage.parents.isEmpty && partitions.length == 1
       if (shouldRunLocally) {
@@ -810,6 +811,7 @@ class DAGScheduler(
       // this stage will be assigned to "default" pool
       null
     }
+    logInfo("RYLE - submitMissingTasks - Are these the threadLocal properties? " + properties + " properties.stringPropertyNames() " + properties.stringPropertyNames())
 
     runningStages += stage
     // SparkListenerStageSubmitted should be posted before testing whether tasks are
