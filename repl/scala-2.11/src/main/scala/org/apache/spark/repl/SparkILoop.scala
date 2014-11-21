@@ -60,9 +60,9 @@ class SparkILoop(in0: Option[BufferedReader], protected val out: JPrintWriter)
 
   def initializeSpark() {
     intp.beQuietDuring {
-      command( """
-         @transient val sc = org.apache.spark.repl.Main.createSparkContext();
-               """)
+  //    command( """
+   //      @transient val sc = org.apache.spark.repl.Main.createSparkContext();
+   //            """)
       command("import org.apache.spark.SparkContext._")
     }
     echo("Spark context available as sc.")
@@ -857,9 +857,16 @@ class SparkILoop(in0: Option[BufferedReader], protected val out: JPrintWriter)
           m.staticClass(classTag[T].runtimeClass.getName).toTypeConstructor.asInstanceOf[U # Type]
       })
 
-  private def loopPostInit() {
+  private def loopPostInit(sc: SparkContext) {
     // Bind intp somewhere out of the regular namespace where
     // we can get at it in generated code.
+    lazy val tagOfSparkContext = tagOfStaticClass[org.apache.spark.SparkContext]
+
+    // Bind intp somewhere out of the regular namespace where
+    // we can get at it in generated code.
+    intp.quietBind(NamedParam[SparkContext]("sc", sc)(tagOfSparkContext, classTag[SparkContext]))
+
+
     intp.quietBind(NamedParam[SparkIMain]("$intp", intp)(tagOfStaticClass[SparkIMain], classTag[SparkIMain]))
     // Auto-run code via some setting.
     ( replProps.replAutorunCode.option
@@ -879,7 +886,7 @@ class SparkILoop(in0: Option[BufferedReader], protected val out: JPrintWriter)
       case _              =>
     }
   }
-  def process(settings: Settings): Boolean = savingContextLoader {
+  def process(settings: Settings, sc: SparkContext = null): Boolean = savingContextLoader {
     this.settings = settings
     createInterpreter()
 
@@ -887,7 +894,7 @@ class SparkILoop(in0: Option[BufferedReader], protected val out: JPrintWriter)
     in = in0.fold(chooseReader(settings))(r => SimpleReader(r, out, interactive = true))
     globalFuture = future {
       intp.initializeSynchronous()
-      loopPostInit()
+      loopPostInit(sc)
       !intp.reporter.hasErrors
     }
     import scala.concurrent.duration._
