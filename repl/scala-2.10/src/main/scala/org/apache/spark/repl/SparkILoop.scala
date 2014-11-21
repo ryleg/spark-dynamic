@@ -913,7 +913,7 @@ class SparkILoop(in0: Option[BufferedReader], protected val out: JPrintWriter,
           m.staticClass(classTag[T].runtimeClass.getName).toTypeConstructor.asInstanceOf[U # Type]
       })
 
-  def process(settings: Settings): Boolean = savingContextLoader {
+  def process(settings: Settings, sc: SparkContext = null): Boolean = savingContextLoader {
     if (getMaster() == "yarn-client") System.setProperty("SPARK_YARN_MODE", "true")
 
     this.settings = settings
@@ -930,9 +930,13 @@ class SparkILoop(in0: Option[BufferedReader], protected val out: JPrintWriter,
         }
     }
     lazy val tagOfSparkIMain = tagOfStaticClass[org.apache.spark.repl.SparkIMain]
+    lazy val tagOfSparkContext = tagOfStaticClass[org.apache.spark.SparkContext]
+
     // Bind intp somewhere out of the regular namespace where
     // we can get at it in generated code.
     addThunk(intp.quietBind(NamedParam[SparkIMain]("$intp", intp)(tagOfSparkIMain, classTag[SparkIMain])))
+    addThunk(intp.quietBind(NamedParam[SparkContext]("sc", sc)(tagOfSparkContext, classTag[SparkContext])))
+
     addThunk({
       import scala.tools.nsc.io._
       import Properties.userHome
