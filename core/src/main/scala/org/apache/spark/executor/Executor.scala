@@ -145,6 +145,10 @@ private[spark] class Executor(
     }
   }
 
+  @volatile val activeClassLoaders = scala.collection.mutable.Map[String, ClassLoader]()
+//  @volatile val activeMutableClassLoaders = scala.collection.mutable.Map[String, MutableURLClassLoader]()
+
+
   class TaskRunner(
       execBackend: ExecutorBackend, val taskId: Long, taskName: String, serializedTask: ByteBuffer)
     extends Runnable {
@@ -161,9 +165,53 @@ private[spark] class Executor(
       }
     }
 
+
+    def tryParseSerializedThreadLocalProperties(taskName: String) = {
+      import scala.util.{Try, Success, Failure}
+
+      Try {
+
+        val splitTaskName = taskName.split("stringSerializedthreadLocalProperties:")(1)
+        val secondSplit = splitTaskName.split("parentPoolName:")
+        val threadLocalProperties = secondSplit(0)
+        val poolName = secondSplit(1)
+
+        val dbll = threadLocalProperties.replaceAll("\\{", "").replaceAll("\\}",
+          "").split(",").toList.map {
+          _.split("=").toList
+        }
+        val fakeProperties = dbll.map {
+          case List(x, y) => x -> y
+        }.toMap
+        (fakeProperties, poolName)
+      }.toOption
+    }
+
     override def run() {
       val deserializeStartTime = System.currentTimeMillis()
-      Thread.currentThread.setContextClassLoader(replClassLoader)
+
+      val attemptedParse = tryParseSerializedThreadLocalProperties(fakeTaskName)
+
+      val actualUsedClassLoader = attemptedParse match {
+        case Some((threadLocalProperties, poolName)) =>
+          val jarPath = threadLocalProperties.get("spark.dynamic.jarPath")
+          val replPath = threadLocalProperties.get("spark.dynamic.userReplPath")
+          if (jarPath.isDefined && replPath.isDefined) {
+            val actualJarPath = jarPath.get
+            val actualReplPath = replPath.get
+            val keyCL = actualJarPath.toString() + actualReplPath.toString()
+            activeClassLoaders.getOrElseUpdate(keyCL, {
+              val thisCL = createDynamicClassLoader(actualJarPath)
+              addRestrictedReplClassLoaderIfNeeded(thisCL, actualReplPath)
+            })
+          } else replClassLoader
+
+        case None => replClassLoader
+
+      }
+
+      Thread.currentThread.setContextClassLoader(actualUsedClassLoader)
+
       val ser = SparkEnv.get.closureSerializer.newInstance()
       logInfo(s"Running $taskName (TID $taskId)")
 
@@ -288,6 +336,27 @@ private[spark] class Executor(
    * Create a ClassLoader for use in tasks, adding any JARs specified by the user or any classes
    * created by the interpreter to the search path
    */
+  private def createDynamicClassLoader(uri: String): MutableURLClassLoader = {
+    val currentLoader = Utils.getSparkClassLoader
+
+    // For each of the jars in the jarSet, add them to the class loader.
+    // We assume each of the files has already been fetched.
+    val usedUris = currentJars.keySet + uri
+    val urls = usedUris.map { uri =>
+      new File(uri.split("/").last).toURI.toURL
+    }.toArray
+    val userClassPathFirst = conf.getBoolean("spark.files.userClassPathFirst", false)
+    userClassPathFirst match {
+      case true => new ChildExecutorURLClassLoader(urls, currentLoader)
+      case false => new ExecutorURLClassLoader(urls, currentLoader)
+    }
+  }
+
+
+  /**
+   * Create a ClassLoader for use in tasks, adding any JARs specified by the user or any classes
+   * created by the interpreter to the search path
+   */
   private def createClassLoader(): MutableURLClassLoader = {
     val currentLoader = Utils.getContextOrSparkClassLoader
 
@@ -300,6 +369,30 @@ private[spark] class Executor(
     userClassPathFirst match {
       case true => new ChildExecutorURLClassLoader(urls, currentLoader)
       case false => new ExecutorURLClassLoader(urls, currentLoader)
+    }
+  }
+
+
+  private def addRestrictedReplClassLoaderIfNeeded(parent: ClassLoader, classUri: String): ClassLoader = {
+    // val classUri = conf.get("spark.repl.class.uri", null)
+    if (classUri != null) {
+      logInfo("Using REPL class URI: " + classUri)
+      val userClassPathFirst: java.lang.Boolean =
+        conf.getBoolean("spark.files.userClassPathFirst", false)
+      try {
+        val klass = Class.forName("org.apache.spark.repl.ExecutorClassLoader")
+          .asInstanceOf[Class[_ <: ClassLoader]]
+        val constructor = klass.getConstructor(classOf[SparkConf], classOf[String],
+          classOf[ClassLoader], classOf[Boolean])
+        constructor.newInstance(conf, classUri, parent, userClassPathFirst)
+      } catch {
+        case _: ClassNotFoundException =>
+          logError("Could not find org.apache.spark.repl.ExecutorClassLoader on classpath!")
+          System.exit(1)
+          null
+      }
+    } else {
+      parent
     }
   }
 
