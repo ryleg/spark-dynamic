@@ -35,6 +35,10 @@ import org.apache.spark.shuffle.FetchFailedException
 import org.apache.spark.storage.{StorageLevel, TaskResultBlockId}
 import org.apache.spark.util.{SparkUncaughtExceptionHandler, AkkaUtils, Utils}
 
+object TempExecutorStuff{
+
+}
+
 /**
  * Spark executor used with Mesos, YARN, and the standalone scheduler.
  * In coarse-grained mode, an existing actor system is provided.
@@ -145,8 +149,9 @@ private[spark] class Executor(
     }
   }
 
-  @volatile val activeClassLoaders = scala.collection.mutable.Map[String, ClassLoader]()
-//  @volatile val activeMutableClassLoaders = scala.collection.mutable.Map[String, MutableURLClassLoader]()
+   val activeClassLoaders = scala.collection.mutable.Map[String, ClassLoader]()
+//  @volatile val activeMutableClassLoaders
+// = scala.collection.mutable.Map[String, MutableURLClassLoader]()
 
 
   class TaskRunner(
@@ -192,7 +197,7 @@ private[spark] class Executor(
     override def run() {
       val deserializeStartTime = System.currentTimeMillis()
 
-      val attemptedParse = tryParseSerializedThreadLocalProperties(fakeTaskName)
+      val attemptedParse = tryParseSerializedThreadLocalProperties(taskName)
 
       val actualUsedClassLoader = attemptedParse match {
         case Some((threadLocalProperties, poolName)) =>
@@ -202,10 +207,16 @@ private[spark] class Executor(
             val actualJarPath = jarPath.get
             val actualReplPath = replPath.get
             val keyCL = actualJarPath.toString() + actualReplPath.toString()
-            activeClassLoaders.getOrElseUpdate(keyCL, {
+            val thisReplCL =  activeClassLoaders.get(keyCL) match{
+              case Some(replCL) => replCL
+              case None =>
               val thisCL = createDynamicClassLoader(actualJarPath)
-              addRestrictedReplClassLoaderIfNeeded(thisCL, actualReplPath)
-            })
+              val replCL = addRestrictedReplClassLoaderIfNeeded(thisCL,
+                actualReplPath)
+                replCL
+
+            }
+            thisReplCL
           } else replClassLoader
 
         case None => replClassLoader
@@ -375,7 +386,10 @@ private[spark] class Executor(
   }
 
 
-  private def addRestrictedReplClassLoaderIfNeeded(parent: ClassLoader, classUri: String): ClassLoader = {
+  private def addRestrictedReplClassLoaderIfNeeded(
+                                                    parent: ClassLoader,
+                                                    classUri: String):
+  ClassLoader = {
     // val classUri = conf.get("spark.repl.class.uri", null)
     if (classUri != null) {
       logInfo("Using REPL class URI: " + classUri)

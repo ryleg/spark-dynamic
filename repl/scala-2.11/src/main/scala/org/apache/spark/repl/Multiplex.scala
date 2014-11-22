@@ -31,7 +31,11 @@ object Multiplex extends Logging {
 
   var sparkContext : SparkContext = null
 
-  def runMultipleSessions(sc: SparkContext, userIOs: List[(Option[BufferedReader], JPrintWriter)]) = {
+  def runMultipleSessions(sc: SparkContext,
+                          userIOs: List[(
+                            Option[BufferedReader],
+                              JPrintWriter
+                            )]) = {
     sparkContext = sc
     if (getMaster == "yarn-client") System.setProperty("SPARK_YARN_MODE", "true")
     // Start the classServer and store its URI in a spark system property
