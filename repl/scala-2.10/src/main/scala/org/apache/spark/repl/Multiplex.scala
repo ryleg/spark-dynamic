@@ -19,10 +19,10 @@ package org.apache.spark.repl
 
 import java.io.BufferedReader
 
-import org.apache.spark.util.Utils
 import org.apache.spark._
+import org.apache.spark.util.Utils
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.tools.nsc.Settings
 import scala.tools.nsc.interpreter._
 
@@ -33,9 +33,9 @@ object Multiplex extends Logging {
 
   def runMultipleSessions(sc: SparkContext,
                           userIOs: List[(
-                            Option[BufferedReader],
+                            BufferedReader,
                               JPrintWriter
-                            )]) = {
+                            )])(implicit ec: ExecutionContextExecutor = scala.concurrent.ExecutionContext.Implicits.global) = {
     sparkContext = sc
     if (getMaster == "yarn-client") System.setProperty("SPARK_YARN_MODE", "true")
     // Start the classServer and store its URI in a spark system property
@@ -52,15 +52,18 @@ object Multiplex extends Logging {
        classServer.start()
        logInfo("Spark class server started at " + classServer.uri +
          s" by user: $userId")
+
+       val interp = new SparkILoop(in0, out)
+
        val loopFuture = Future {
          // var sparkContext: SparkContext = _
-         var interp = new SparkILoop(in0, out) // this is a public var because tests reset it.
+          // this is a public var because tests reset it.
          interp.process(s, sc) // Repl starts and goes in loop of R.E.P.L
          classServer.stop()
          Option(sc).map(_.stop)
        }
 
-       (loopFuture, classServer.uri)
+       (interp, classServer.uri, loopFuture)
     }
   }
 

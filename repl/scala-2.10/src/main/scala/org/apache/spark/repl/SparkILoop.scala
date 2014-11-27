@@ -989,6 +989,7 @@ class SparkILoop(in0: Option[BufferedReader], protected val out: JPrintWriter,
     }
     sparkContext = new SparkContext(conf)
     logInfo("Created spark context..")
+    logInfo("RYLE - this means REPL is on 210")
     sparkContext
   }
 

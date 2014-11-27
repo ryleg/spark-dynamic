@@ -71,6 +71,7 @@ object Main extends Logging {
     }
     sparkContext = new SparkContext(conf)
     logInfo("Created spark context..")
+    logInfo("RYLE - this means REPL is on 211")
     sparkContext
   }
 
