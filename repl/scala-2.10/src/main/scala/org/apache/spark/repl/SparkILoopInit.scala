@@ -120,9 +120,10 @@ trait SparkILoopInit {
 
   def initializeSpark() {
     intp.beQuietDuring {
-      command("""
+      //RYLE's modification don't need to create a new one.
+/*      command("""
          @transient val sc = org.apache.spark.repl.Main.interp.createSparkContext();
-        """)
+        """)*/
       command("import org.apache.spark.SparkContext._")
     }
     echo("Spark context available as sc.")
