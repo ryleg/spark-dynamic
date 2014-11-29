@@ -96,7 +96,7 @@ import org.apache.spark.util.Utils
     /** Local directory to save .class files too */
     lazy val outputDir = {
       val tmp = System.getProperty("java.io.tmpdir")
-      val rootDir = conf.get("spark.repl.classdir",  tmp)
+      val rootDir = tmp //conf.get("spark.repl.classdir",  tmp)
       Utils.createTempDir(rootDir)
     }
     if (SPARK_DEBUG_REPL) {

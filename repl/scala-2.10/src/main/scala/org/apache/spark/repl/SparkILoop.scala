@@ -10,6 +10,7 @@ package org.apache.spark.repl
 
 import java.net.URL
 
+import scala.concurrent.Future
 import scala.reflect.io.AbstractFile
 import scala.tools.nsc._
 import scala.tools.nsc.backend.JavaPlatform
@@ -905,7 +906,7 @@ class SparkILoop(in0: Option[BufferedReader], protected val out: JPrintWriter,
 
   val u: scala.reflect.runtime.universe.type = scala.reflect.runtime.universe
   val m = u.runtimeMirror(Utils.getSparkClassLoader)
-  private def tagOfStaticClass[T: ClassTag]: u.TypeTag[T] =
+  def tagOfStaticClass[T: ClassTag]: u.TypeTag[T] =
     u.TypeTag[T](
       m,
       new TypeCreator {
@@ -913,7 +914,12 @@ class SparkILoop(in0: Option[BufferedReader], protected val out: JPrintWriter,
           m.staticClass(classTag[T].runtimeClass.getName).toTypeConstructor.asInstanceOf[U # Type]
       })
 
-  def process(settings: Settings, sc: SparkContext = null): Boolean = savingContextLoader {
+  def rebindSC(sc: SparkContext) = {
+    lazy val tagOfSparkContext = tagOfStaticClass[org.apache.spark.SparkContext]
+    addThunk(intp.quietBind(NamedParam[SparkContext]("sc", sc)(tagOfSparkContext, classTag[SparkContext])))
+  }
+
+  def process(settings: Settings) : Future[Boolean] = savingContextLoader {
     if (getMaster() == "yarn-client") System.setProperty("SPARK_YARN_MODE", "true")
 
     this.settings = settings
@@ -930,12 +936,10 @@ class SparkILoop(in0: Option[BufferedReader], protected val out: JPrintWriter,
         }
     }
     lazy val tagOfSparkIMain = tagOfStaticClass[org.apache.spark.repl.SparkIMain]
-    lazy val tagOfSparkContext = tagOfStaticClass[org.apache.spark.SparkContext]
 
     // Bind intp somewhere out of the regular namespace where
     // we can get at it in generated code.
     addThunk(intp.quietBind(NamedParam[SparkIMain]("$intp", intp)(tagOfSparkIMain, classTag[SparkIMain])))
-    addThunk(intp.quietBind(NamedParam[SparkContext]("sc", sc)(tagOfSparkContext, classTag[SparkContext])))
 
     addThunk({
       import scala.tools.nsc.io._
@@ -969,11 +973,12 @@ class SparkILoop(in0: Option[BufferedReader], protected val out: JPrintWriter,
 
     loadFiles(settings)
 
-    try loop()
-    catch AbstractOrMissingHandler()
-    finally closeInterpreter()
-
-    true
+    Future {
+      try loop()
+      catch AbstractOrMissingHandler()
+      finally closeInterpreter()
+      true
+    }
   }
 
   def createSparkContext(): SparkContext = {
