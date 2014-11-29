@@ -217,9 +217,13 @@ private[spark] class Executor(
 
             }
             thisReplCL
-          } else replClassLoader
+          } else {
+            logInfo("RYLE - Failed to find stuff in tlp")
+            replClassLoader
+          }
 
-        case None => replClassLoader
+        case None => logInfo("RYLE - Failed to find parse tlp")
+          replClassLoader
 
       }
 
