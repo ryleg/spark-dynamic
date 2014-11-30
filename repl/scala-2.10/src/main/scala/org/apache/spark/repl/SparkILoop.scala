@@ -60,7 +60,7 @@ import org.apache.spark.util.Utils
  *  @version 1.2
  */
 class SparkILoop(in0: Option[BufferedReader], protected val out: JPrintWriter,
-               val master: Option[String])(implicit ec: ExecutionContext)
+               val master: Option[String])(implicit ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global)
                 extends AnyRef
                    with LoopCommands
                    with SparkILoopInit
