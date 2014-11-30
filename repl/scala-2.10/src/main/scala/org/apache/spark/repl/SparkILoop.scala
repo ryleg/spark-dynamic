@@ -10,6 +10,8 @@ package org.apache.spark.repl
 
 import java.net.URL
 
+import scala.concurrent.ExecutionContext
+import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.reflect.io.AbstractFile
 import scala.tools.nsc._
@@ -919,7 +921,7 @@ class SparkILoop(in0: Option[BufferedReader], protected val out: JPrintWriter,
     addThunk(intp.quietBind(NamedParam[SparkContext]("sc", sc)(tagOfSparkContext, classTag[SparkContext])))
   }
 
-  def process(settings: Settings) : Future[Boolean] = savingContextLoader {
+  def process(settings: Settings)(implicit ec: ExecutionContext) : Future[Boolean] = savingContextLoader {
     if (getMaster() == "yarn-client") System.setProperty("SPARK_YARN_MODE", "true")
 
     this.settings = settings
@@ -954,7 +956,7 @@ class SparkILoop(in0: Option[BufferedReader], protected val out: JPrintWriter,
 
     // it is broken on startup; go ahead and exit
     if (intp.reporter.hasErrors)
-      return false
+      return Future{false}
 
     // This is about the illusion of snappiness.  We call initialize()
     // which spins off a separate thread, then print the prompt and try
