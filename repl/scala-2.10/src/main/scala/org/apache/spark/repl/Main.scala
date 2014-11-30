@@ -18,6 +18,7 @@
 package org.apache.spark.repl
 
 import scala.collection.mutable.Set
+import adaptor.Multiplex
 
 object Main {
   private var _interp: SparkILoop = _
@@ -27,7 +28,8 @@ object Main {
   def interp_=(i: SparkILoop) { _interp = i }
 
   def main(args: Array[String]) {
-    _interp = new SparkILoop
-    _interp.process(args)
+    Multiplex.main(args)
+ /*   _interp = new SparkILoop
+    _interp.process(args)*/
   }
 }
