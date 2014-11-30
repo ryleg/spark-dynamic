@@ -1031,6 +1031,9 @@ class SparkILoop(in0: Option[BufferedReader], protected val out: JPrintWriter,
 }
 
 object SparkILoop {
+
+  implicit val ec = scala.concurrent.ExecutionContext.Implicits.global
+
   implicit def loopToInterpreter(repl: SparkILoop): SparkIMain = repl.intp
   private def echo(msg: String) = Console println msg
 
