@@ -16,7 +16,6 @@ import scala.concurrent.duration._
 
 object Server{
 
-
   def createSparkContext(): SparkContext = {
     val execUri = System.getenv("SPARK_EXECUTOR_URI")
     val conf = new SparkConf()
@@ -27,6 +26,8 @@ object Server{
     }
     sc = new SparkContext(conf)
     sc
+
+
   }
 
   def getMaster(): String = {
@@ -41,8 +42,9 @@ object Server{
   val defaultPort = 16180
 
   def main(args: Array[String]) {
-    implicit val as = SparkEnv.get.actorSystem
     createSparkContext()
+    implicit val as = SparkEnv.get.actorSystem
+
     start(args)
   }
 
