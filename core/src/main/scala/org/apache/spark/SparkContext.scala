@@ -1940,17 +1940,6 @@ object SparkContext extends Logging {
     }
   }
 
-  def createMultiplexREPLActors(args: Array[String]) = {
-
-    implicit val as = SparkEnv.get.actorSystem
-    for (user <- (1 to 10)) {
-      val portOffset = 16180 + user
-      as.actorOf(Props(new org.apache.spark.adaptor.Server(args, portOffset)))
-    }
-
-  }
-
-
 }
 
 /**

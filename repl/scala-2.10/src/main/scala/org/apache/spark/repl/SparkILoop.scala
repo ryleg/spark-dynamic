@@ -920,7 +920,19 @@ class SparkILoop(in0: Option[BufferedReader], protected val out: JPrintWriter,
     addThunk(intp.quietBind(NamedParam[SparkContext]("sc", sc)(tagOfSparkContext, classTag[SparkContext])))
   }
 
-  def process(settings: Settings)(implicit ec: ExecutionContext) : Future[Boolean] = savingContextLoader {
+  def multiplexProcess(args: Array[String]) = {
+    val command = new SparkCommandLine(args.toList, msg => echo(msg))
+    def neededHelp(): String =
+      (if (command.settings.help.value) command.usageMsg + "\n" else "") +
+        (if (command.settings.Xhelp.value) command.xusageMsg + "\n" else "")
+/*    neededHelp() match {
+      case ""     => command.ok && process(command.settings)
+      case help   => echoNoNL(help) ; true
+    }*/
+    command.settings
+  }
+
+  def multiplexProcess(settings: Settings) = {
     if (getMaster() == "yarn-client") System.setProperty("SPARK_YARN_MODE", "true")
 
     this.settings = settings
@@ -980,6 +992,68 @@ class SparkILoop(in0: Option[BufferedReader], protected val out: JPrintWriter,
       finally closeInterpreter()
       true
     }
+
+  }
+
+
+  def process(settings: Settings): Boolean = savingContextLoader {
+    if (getMaster() == "yarn-client") System.setProperty("SPARK_YARN_MODE", "true")
+
+    this.settings = settings
+    createInterpreter()
+
+    // sets in to some kind of reader depending on environmental cues
+    in = in0 match {
+      case Some(reader) => SimpleReader(reader, out, true)
+      case None         =>
+        // some post-initialization
+        chooseReader(settings) match {
+          case x: SparkJLineReader => addThunk(x.consoleReader.postInit) ; x
+          case x                   => x
+        }
+    }
+    lazy val tagOfSparkIMain = tagOfStaticClass[org.apache.spark.repl.SparkIMain]
+
+    // Bind intp somewhere out of the regular namespace where
+    // we can get at it in generated code.
+    addThunk(intp.quietBind(NamedParam[SparkIMain]("$intp", intp)(tagOfSparkIMain, classTag[SparkIMain])))
+
+    addThunk({
+      import scala.tools.nsc.io._
+      import Properties.userHome
+      import scala.compat.Platform.EOL
+      val autorun = replProps.replAutorunCode.option flatMap (f => io.File(f).safeSlurp())
+      if (autorun.isDefined) intp.quietRun(autorun.get)
+    })
+
+    addThunk(printWelcome())
+    addThunk(initializeSpark())
+
+    // it is broken on startup; go ahead and exit
+    if (intp.reporter.hasErrors)
+      return false
+
+    // This is about the illusion of snappiness.  We call initialize()
+    // which spins off a separate thread, then print the prompt and try
+    // our best to look ready.  The interlocking lazy vals tend to
+    // inter-deadlock, so we break the cycle with a single asynchronous
+    // message to an actor.
+    if (isAsync) {
+      intp initialize initializedCallback()
+      createAsyncListener() // listens for signal to run postInitialization
+    }
+    else {
+      intp.initializeSynchronous()
+      postInitialization()
+    }
+    // printWelcome()
+
+    loadFiles(settings)
+    try loop()
+    catch AbstractOrMissingHandler()
+    finally closeInterpreter()
+    true
+
   }
 
   def createSparkContext(): SparkContext = {
@@ -1011,19 +1085,17 @@ class SparkILoop(in0: Option[BufferedReader], protected val out: JPrintWriter,
   }
 
   /** process command-line arguments and do as they request */
-  def process(args: Array[String]): Future[Boolean] = {
+  def process(args: Array[String]): Boolean = {
     val command = new SparkCommandLine(args.toList, msg => echo(msg))
     def neededHelp(): String =
       (if (command.settings.help.value) command.usageMsg + "\n" else "") +
       (if (command.settings.Xhelp.value) command.xusageMsg + "\n" else "")
 
     // if they asked for no help and command is valid, we call the real main
-    process(command.settings)
-    /*
     neededHelp() match {
       case ""     => command.ok && process(command.settings)
       case help   => echoNoNL(help) ; true
-    }*/
+    }
   }
 
   @deprecated("Use `process` instead", "2.9.0")
