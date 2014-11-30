@@ -17,8 +17,18 @@
 
 package org.apache.spark.repl
 
+import org.apache.spark.{Logging, SparkContext}
+
 import scala.collection.mutable.Set
-import adaptor.Multiplex
+import adaptor._
+
+object DebugSleep extends Logging {
+
+  def loop () = {
+    logInfo("RYLE - loop")
+  }
+
+}
 
 object Main {
   private var _interp: SparkILoop = _
@@ -28,7 +38,15 @@ object Main {
   def interp_=(i: SparkILoop) { _interp = i }
 
   def main(args: Array[String]) {
-    Multiplex.main(args)
+
+    implicit val sc = Server.createSparkContext()
+    SparkContext.createMultiplexREPLActors(args)
+    while (true)
+    {
+      Thread.sleep(10000)
+      DebugSleep.loop()
+    }
+  //  Multiplex.main(args)
  /*   _interp = new SparkILoop
     _interp.process(args)*/
   }

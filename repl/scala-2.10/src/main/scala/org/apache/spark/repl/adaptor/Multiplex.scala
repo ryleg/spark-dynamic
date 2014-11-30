@@ -22,6 +22,7 @@ import java.io.BufferedReader
 import akka.actor.ActorSystem
 import org.apache.spark._
 import org.apache.spark.repl.SparkILoop
+import org.apache.spark.util.AkkaUtils
 
 object DebugSleep extends Logging {
 
@@ -39,20 +40,21 @@ export MAVEN_OPTS="-Xmx38g -XX:MaxPermSize=9g -XX:ReservedCodeCacheSize=9g"
 export JAVA_HOME="/usr/lib/jvm/java-1.7.0-openjdk-amd64"
 
 export MAVEN_OPTS="-Xmx2g -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=512m"
-*/
+*//*
   def main (args: Array[String]) {
 
     implicit val ec = org.apache.spark.repl.adaptor.REPL.ec
 
     Server.createSparkContext()
 
-    implicit val as = SparkEnv.get.actorSystem
+   // SparkContext.createMultiplexREPLActors()
 
     for (user <- (1 to 10)) {
       Server.start(args, user)
     }
+    implicit val as = SparkEnv.get.actorSystem
 
     DebugSleep.loop()
 
-  }
+  }*/
 }

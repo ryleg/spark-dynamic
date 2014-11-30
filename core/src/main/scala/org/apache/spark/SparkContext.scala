@@ -1513,6 +1513,8 @@ class SparkContext(config: SparkConf) extends Logging {
  */
 object SparkContext extends Logging {
 
+
+
   /**
    * Lock that guards access to global variables that track SparkContext construction.
    */
@@ -1937,6 +1939,18 @@ object SparkContext extends Logging {
         throw new SparkException("Could not parse Master URL: '" + master + "'")
     }
   }
+
+  def createMultiplexREPLActors(args: Array[String]) = {
+
+    implicit val as = SparkEnv.get.actorSystem
+    for (user <- (1 to 10)) {
+      val portOffset = 16180 + user
+      as.actorOf(Props(new org.apache.spark.repl.adaptor.Server(args, portOffset)))
+    }
+
+  }
+
+
 }
 
 /**
