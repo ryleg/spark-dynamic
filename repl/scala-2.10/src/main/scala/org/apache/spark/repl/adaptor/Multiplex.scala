@@ -22,6 +22,15 @@ import java.io.BufferedReader
 import org.apache.spark._
 import org.apache.spark.repl.SparkILoop
 
+object DebugSleep extends Logging {
+
+  def loop() = {
+    Thread.sleep(20000)
+    logInfo("RYLE - MULTIPLEX LOOP")
+  }
+
+}
+
 object Multiplex {
 
   /*
@@ -40,6 +49,8 @@ export MAVEN_OPTS="-Xmx2g -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=512m"
     for (user <- (1 to 10)) {
       Server.start(args, user)
     }
+
+    DebugSleep.loop()
 
   }
 }
