@@ -32,6 +32,8 @@ export MAVEN_OPTS="-Xmx2g -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=512m"
 */
   def main (args: Array[String]) {
 
+    implicit val ec = org.apache.spark.repl.adaptor.REPL.ec
+
     implicit val as = SparkEnv.get.actorSystem
     Server.createSparkContext()
 

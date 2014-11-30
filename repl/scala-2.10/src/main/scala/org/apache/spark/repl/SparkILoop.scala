@@ -11,7 +11,6 @@ package org.apache.spark.repl
 import java.net.URL
 
 import scala.concurrent.ExecutionContext
-import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.reflect.io.AbstractFile
 import scala.tools.nsc._
@@ -61,7 +60,7 @@ import org.apache.spark.util.Utils
  *  @version 1.2
  */
 class SparkILoop(in0: Option[BufferedReader], protected val out: JPrintWriter,
-               val master: Option[String])
+               val master: Option[String])(implicit ec: ExecutionContext)
                 extends AnyRef
                    with LoopCommands
                    with SparkILoopInit
@@ -1012,17 +1011,19 @@ class SparkILoop(in0: Option[BufferedReader], protected val out: JPrintWriter,
   }
 
   /** process command-line arguments and do as they request */
-  def process(args: Array[String]): Boolean = {
+  def process(args: Array[String]): Future[Boolean] = {
     val command = new SparkCommandLine(args.toList, msg => echo(msg))
     def neededHelp(): String =
       (if (command.settings.help.value) command.usageMsg + "\n" else "") +
       (if (command.settings.Xhelp.value) command.xusageMsg + "\n" else "")
 
     // if they asked for no help and command is valid, we call the real main
+    process(command.settings)
+    /*
     neededHelp() match {
       case ""     => command.ok && process(command.settings)
       case help   => echoNoNL(help) ; true
-    }
+    }*/
   }
 
   @deprecated("Use `process` instead", "2.9.0")

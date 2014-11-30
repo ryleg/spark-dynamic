@@ -24,6 +24,8 @@ import REPL._
 
 class REPLManager(args: Array[String]) extends REPLManagerLike{
 
+  implicit val ec = org.apache.spark.repl.adaptor.REPL.ec
+
   val in0 = br
   val out = pw
 
