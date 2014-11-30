@@ -1,4 +1,4 @@
-package org.apache.spark.repl.adaptor
+package org.apache.spark.adaptor
 
 
 import org.json4s.jackson.JsonMethods._

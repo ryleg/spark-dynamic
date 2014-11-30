@@ -20,7 +20,7 @@ package org.apache.spark.repl
 import org.apache.spark.{Logging, SparkContext}
 
 import scala.collection.mutable.Set
-import adaptor._
+import org.apache.spark.adaptor._
 
 object DebugSleep extends Logging {
 

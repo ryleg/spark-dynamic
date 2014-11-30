@@ -1,9 +1,9 @@
-package org.apache.spark.repl.adaptor
+package org.apache.spark.adaptor
 
 import akka.actor.{Actor, ActorRef}
 import akka.io.Tcp.{Write, Received}
 import akka.util.{ByteString, Timeout}
-import org.apache.spark.repl.adaptor.JSON.REPLWrite
+import org.apache.spark.adaptor.JSON.REPLWrite
 import scala.concurrent.duration._
 import akka.pattern.ask
 

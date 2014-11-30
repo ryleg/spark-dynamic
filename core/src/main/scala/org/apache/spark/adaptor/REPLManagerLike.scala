@@ -1,10 +1,10 @@
-package org.apache.spark.repl.adaptor
+package org.apache.spark.adaptor
 
 import java.io._
 
 import akka.actor.Actor
-import org.apache.spark.repl.adaptor.JSON.{REPLHistory, REPLRead, REPLWrite, REPLWriteHistory}
-import org.apache.spark.repl.adaptor.REPL._
+import org.apache.spark.adaptor.JSON.{REPLHistory, REPLRead, REPLWrite, REPLWriteHistory}
+import org.apache.spark.adaptor.REPL._
 
 import scala.concurrent.Future
 

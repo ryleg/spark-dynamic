@@ -1,4 +1,4 @@
-package org.apache.spark.repl.adaptor.impl
+package org.apache.spark.adaptor.impl
 
 import akka.util.{ByteString, Timeout}
 
@@ -7,8 +7,8 @@ import scala.concurrent.duration._
 
 import akka.actor.{ActorSystem, ActorRef}
 import akka.pattern.ask
-import org.apache.spark.repl.adaptor.JSON
-import org.apache.spark.repl.adaptor.REPL._
+import org.apache.spark.adaptor.JSON
+import org.apache.spark.adaptor.REPL._
 
 /**
  * Copyright 2014, Radius Intelligence, Inc.

@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.spark.repl.adaptor
+package org.apache.spark.adaptor
 
 import java.io.BufferedReader
 
@@ -43,7 +43,7 @@ export MAVEN_OPTS="-Xmx2g -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=512m"
 *//*
   def main (args: Array[String]) {
 
-    implicit val ec = org.apache.spark.repl.adaptor.REPL.ec
+    implicit val ec = org.apache.spark.adaptor.REPL.ec
 
     Server.createSparkContext()
 

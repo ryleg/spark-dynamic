@@ -1945,7 +1945,7 @@ object SparkContext extends Logging {
     implicit val as = SparkEnv.get.actorSystem
     for (user <- (1 to 10)) {
       val portOffset = 16180 + user
-      as.actorOf(Props(new org.apache.spark.repl.adaptor.Server(args, portOffset)))
+      as.actorOf(Props(new org.apache.spark.adaptor.Server(args, portOffset)))
     }
 
   }

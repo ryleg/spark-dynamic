@@ -1,5 +1,5 @@
 
-package org.apache.spark.repl.adaptor
+package org.apache.spark.adaptor
 
 import java.io.OutputStream
 import java.net.InetSocketAddress

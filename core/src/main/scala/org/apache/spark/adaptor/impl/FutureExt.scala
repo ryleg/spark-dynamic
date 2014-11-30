@@ -1,4 +1,4 @@
-package org.apache.spark.repl.adaptor.impl
+package org.apache.spark.adaptor.impl
 
 import akka.util.Timeout
 import scala.concurrent.duration._
