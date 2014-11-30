@@ -3,7 +3,9 @@ package org.apache.spark.adaptor
 import java.io._
 
 import akka.actor.{Props, ActorSystem, Actor}
+import org.apache.spark.repl
 import org.apache.spark.repl.SparkILoop
+
 import scala.concurrent._
 import JSON._
 
@@ -24,7 +26,7 @@ import REPL._
 
 class REPLManager(args: Array[String]) extends REPLManagerLike{
 
-  implicit val ec = org.apache.spark.repl.adaptor.REPL.ec
+  implicit val ec = org.apache.spark.adaptor.REPL.ec
 
   val in0 = br
   val out = pw

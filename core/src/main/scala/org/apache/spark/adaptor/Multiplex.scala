@@ -21,7 +21,6 @@ import java.io.BufferedReader
 
 import akka.actor.ActorSystem
 import org.apache.spark._
-import org.apache.spark.repl.SparkILoop
 import org.apache.spark.util.AkkaUtils
 
 object DebugSleep extends Logging {
