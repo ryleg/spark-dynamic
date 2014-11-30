@@ -7,8 +7,8 @@ import scala.concurrent.duration._
 
 import akka.actor.{ActorSystem, ActorRef}
 import akka.pattern.ask
-import org.fayalite.repl.JSON
-import org.fayalite.repl.REPL._
+import org.apache.spark.repl.adaptor.JSON
+import org.apache.spark.repl.adaptor.REPL._
 
 /**
  * Copyright 2014, Radius Intelligence, Inc.

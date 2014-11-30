@@ -24,26 +24,17 @@ import org.apache.spark.repl.SparkILoop
 
 object Multiplex {
 
+  /*
+export MAVEN_OPTS="-Xmx38g -XX:MaxPermSize=9g -XX:ReservedCodeCacheSize=9g"
+export JAVA_HOME="/usr/lib/jvm/java-1.7.0-openjdk-amd64"
+
+export MAVEN_OPTS="-Xmx2g -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=512m"
+*/
   def main (args: Array[String]) {
 
     for (user <- (1 to 10)) {
-      new Server
+      Server.start(args, user)
     }
 
   }
-  def runMultipleSessions(sc: SparkContext,
-                          userIOs: List[(
-                            BufferedReader,
-                              JPrintWriter
-                            )])(implicit ec: ExecutionContextExecutor = scala.concurrent.ExecutionContext.Implicits.global) = {
-
-     userIOs.zipWithIndex.map { case ((in0, out), userId) =>
-
-       val interp = new SparkILoop(in0, out)
-
-       val loopFuture = interp.process()
-       (interp, classServer.uri, loopFuture)
-    }
-  }
-
 }
