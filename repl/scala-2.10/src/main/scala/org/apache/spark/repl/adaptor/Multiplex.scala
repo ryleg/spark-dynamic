@@ -19,6 +19,7 @@ package org.apache.spark.repl.adaptor
 
 import java.io.BufferedReader
 
+import akka.actor.ActorSystem
 import org.apache.spark._
 import org.apache.spark.repl.SparkILoop
 
@@ -43,7 +44,7 @@ export MAVEN_OPTS="-Xmx2g -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=512m"
 
     implicit val ec = org.apache.spark.repl.adaptor.REPL.ec
 
-    implicit val as = SparkEnv.get.actorSystem
+    implicit val as = ActorSystem("RYLE")
     Server.createSparkContext()
 
     for (user <- (1 to 10)) {
