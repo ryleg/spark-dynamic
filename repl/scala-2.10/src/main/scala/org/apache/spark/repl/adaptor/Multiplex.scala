@@ -32,6 +32,9 @@ export MAVEN_OPTS="-Xmx2g -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=512m"
 */
   def main (args: Array[String]) {
 
+    implicit val as = SparkEnv.get.actorSystem
+    Server.createSparkContext()
+
     for (user <- (1 to 10)) {
       Server.start(args, user)
     }
