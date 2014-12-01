@@ -611,6 +611,35 @@ class SparkILoop(in0: Option[BufferedReader], protected val out: JPrintWriter,
     true
   }
 
+  def multiplexLoopFragment() = {
+/*
+    def readOneLine() = {
+      out.flush()
+      in readLine prompt
+    }
+    // return false if repl should exit
+    def processLine(line: String): Boolean = {
+/*      if (isAsync) {
+        if (!awaitInitialized()) return false
+        runThunks()
+      }
+      if (line eq null) false               // assume null means EOF
+      else command(line) match {
+        case Result(false, _)           => false
+        case Result(_, Some(finalLine)) => addReplay(finalLine) ; true
+        case _                          => true
+      }
+    }*/
+ //   def innerLoop() {
+   //   val shouldContinue = try {
+        processLine(readOneLine())
+   /*   } catch {case t: Throwable => crashRecovery(t)}
+      if (shouldContinue)
+        innerLoop()
+    }
+    innerLoop()*/*/
+  }
+
   /** The main read-eval-print loop for the repl.  It calls
    *  command() for each line of input, and stops when
    *  command() returns false.
@@ -941,11 +970,11 @@ class SparkILoop(in0: Option[BufferedReader], protected val out: JPrintWriter,
     // sets in to some kind of reader depending on environmental cues
     in = in0 match {
       case Some(reader) => SimpleReader(reader, out, true)
-      case None         =>
+      case None =>
         // some post-initialization
         chooseReader(settings) match {
-          case x: SparkJLineReader => addThunk(x.consoleReader.postInit) ; x
-          case x                   => x
+          case x: SparkJLineReader => addThunk(x.consoleReader.postInit); x
+          case x => x
         }
     }
     lazy val tagOfSparkIMain = tagOfStaticClass[org.apache.spark.repl.SparkIMain]
@@ -967,7 +996,9 @@ class SparkILoop(in0: Option[BufferedReader], protected val out: JPrintWriter,
 
     // it is broken on startup; go ahead and exit
     if (intp.reporter.hasErrors)
-      return Future{false}
+      return Future {
+        false
+      }
 
     // This is about the illusion of snappiness.  We call initialize()
     // which spins off a separate thread, then print the prompt and try
@@ -986,13 +1017,15 @@ class SparkILoop(in0: Option[BufferedReader], protected val out: JPrintWriter,
 
     loadFiles(settings)
 
+  }
+
+  def multiplexLoop() = {
     Future {
       try loop()
       catch AbstractOrMissingHandler()
       finally closeInterpreter()
       true
     }
-
   }
 
 
