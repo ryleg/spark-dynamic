@@ -173,9 +173,7 @@ private[spark] class Executor(
 
     def tryParseSerializedThreadLocalProperties(taskName: String) = {
       import scala.util.{Try, Success, Failure}
-
       Try {
-
         val splitTaskName = taskName.split("stringSerializedthreadLocalProperties:")(1)
         val secondSplit = splitTaskName.split("parentPoolName:")
         val threadLocalProperties = secondSplit(0)
