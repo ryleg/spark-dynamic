@@ -957,11 +957,10 @@ class SparkILoop(in0: Option[BufferedReader], protected val out: JPrintWriter,
 /*    neededHelp() match {
       case ""     => command.ok && process(command.settings)
       case help   => echoNoNL(help) ; true
-    }*/
-    command.settings
+    }*/command.settings
   }
 
-  def multiplexProcess(settings: Settings) = {
+  def multiplexProcess(settings: Settings): Future[Boolean] = {
     if (getMaster() == "yarn-client") System.setProperty("SPARK_YARN_MODE", "true")
 
     this.settings = settings
@@ -1016,6 +1015,8 @@ class SparkILoop(in0: Option[BufferedReader], protected val out: JPrintWriter,
     // printWelcome()
 
     loadFiles(settings)
+
+    Future{true}
 
   }
 

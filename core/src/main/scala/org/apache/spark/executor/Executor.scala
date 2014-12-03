@@ -186,7 +186,7 @@ private[spark] class Executor(
           _.split("=").toList
         }
         val fakeProperties = dbll.map {
-          case List(x, y) => x -> y
+          case List(x, y) => x.trim.stripMargin -> y.trim.stripMargin
         }.toMap
         (fakeProperties, poolName)
       }.toOption
@@ -208,9 +208,14 @@ private[spark] class Executor(
             val actualReplPath = replPath.get
             val keyCL = actualJarPath.toString() + actualReplPath.toString()
             val thisReplCL =  activeClassLoaders.get(keyCL) match{
-              case Some(replCL) => replCL
+              case Some(replCL) =>
+                logInfo(s"RYLE - Found a pre-existing classloader under key: $keyCL")
+                replCL
               case None =>
-              val thisCL = createDynamicClassLoader(actualJarPath)
+                logInfo(s"RYLE - Pre-existing classloader " +
+                  s"not found under key: $keyCL" +
+                s"Creating new classloaders")
+                val thisCL = createDynamicClassLoader(actualJarPath)
               val replCL = addRestrictedReplClassLoaderIfNeeded(thisCL,
                 actualReplPath)
                 replCL
