@@ -105,15 +105,15 @@ import org.apache.spark.util.Utils
 
     val virtualDirectory                              = new PlainFile(outputDir) // "directory" for classfiles
     /** Jetty server that will serve our classes to worker nodes */
-    val classServerPort                               = conf.getInt("spark.replClassServer.port", 0)
-    val classServer                                   = new HttpServer(outputDir, new SecurityManager(conf), classServerPort, "HTTP class server")
-    private var currentSettings: Settings             = initialSettings
+    var classServerPort                               = conf.getInt("spark.replClassServer.port", 0)
+    var classServer                                   = new HttpServer(outputDir, new SecurityManager(conf), classServerPort, "HTTP class server")
+    var currentSettings: Settings             = initialSettings
     var printResults                                  = true      // whether to print result lines
     var totalSilence                                  = false     // whether to print anything
-    private var _initializeComplete                   = false     // compiler is initialized
-    private var _isInitialized: Future[Boolean]       = null      // set up initialization future
-    private var bindExceptions                        = true      // whether to bind the lastException variable
-    private var _executionWrapper                     = ""        // code to be wrapped around all lines
+    var _initializeComplete                   = false     // compiler is initialized
+    var _isInitialized: Future[Boolean]       = null      // set up initialization future
+    var bindExceptions                        = true      // whether to bind the lastException variable
+    var _executionWrapper                     = ""        // code to be wrapped around all lines
 
 
     // Start the classServer and store its URI in a spark system property
@@ -130,21 +130,27 @@ import org.apache.spark.util.Utils
      *  use a lazy val to ensure that any attempt to use the compiler object waits
      *  on the future.
      */
-    private var _classLoader: AbstractFileClassLoader = null                              // active classloader
-    private val _compiler: Global                     = newCompiler(settings, reporter)   // our private compiler
+    var _classLoader: AbstractFileClassLoader = null                              // active classloader
+    val _compiler: Global                     = newCompiler(settings, reporter)   // our private compiler
 
-    private trait ExposeAddUrl extends URLClassLoader { def addNewUrl(url: URL) = this.addURL(url) }
-    private var _runtimeClassLoader: URLClassLoader with ExposeAddUrl = null              // wrapper exposing addURL
+    trait ExposeAddUrl extends URLClassLoader { def addNewUrl(url: URL) = this.addURL(url) }
+    var _runtimeClassLoader: URLClassLoader with ExposeAddUrl = null              // wrapper exposing addURL
 
-    private val nextReqId = {
+    val nextReqId = {
       var counter = 0
       () => { counter += 1 ; counter }
     }
 
-    def compilerClasspath: Seq[URL] = (
-      if (isInitializeComplete) global.classPath.asURLs
-      else new PathResolver(settings).result.asURLs  // the compiler's classpath
-      )
+    var compilerCustomClasspath : Seq[URL] = _
+
+    def compilerClasspath: Seq[URL] = {
+      if (compilerCustomClasspath == null) {
+        if (isInitializeComplete) global.classPath.asURLs
+        else new PathResolver(settings).result.asURLs // the compiler's classpath
+      } else compilerCustomClasspath
+    }
+
+
     def settings = currentSettings
     def mostRecentLine = prevRequestList match {
       case Nil      => ""
@@ -395,7 +401,7 @@ import org.apache.spark.util.Utils
       ensureClassLoader()
       _classLoader
     }
-    private class TranslatingClassLoader(parent: ClassLoader) extends AbstractFileClassLoader(virtualDirectory, parent) {
+    class TranslatingClassLoader(parent: ClassLoader) extends AbstractFileClassLoader(virtualDirectory, parent) {
       /** Overridden here to try translating a simple name to the generated
        *  class name if the original attempt fails.  This method is used by
        *  getResourceAsStream as well as findClass.
@@ -410,7 +416,7 @@ import org.apache.spark.util.Utils
         }
       }
     }
-    private def makeClassLoader(): AbstractFileClassLoader =
+    def makeClassLoader(): AbstractFileClassLoader =
       new TranslatingClassLoader(parentClassLoader match {
         case null   => ScalaClassLoader fromURLs compilerClasspath
         case p      =>
