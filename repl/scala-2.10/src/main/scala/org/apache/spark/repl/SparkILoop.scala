@@ -960,7 +960,7 @@ class SparkILoop(in0: Option[BufferedReader], protected val out: JPrintWriter,
     }*/command.settings
   }
 
-  def multiplexProcess(settings: Settings): Future[Boolean] = {
+  def multiplexProcess(settings: Settings): Future[Boolean] = savingContextLoader {
     if (getMaster() == "yarn-client") System.setProperty("SPARK_YARN_MODE", "true")
 
     this.settings = settings
