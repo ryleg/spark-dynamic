@@ -302,7 +302,7 @@ class SparkIMain(@BeanProperty val factory: ScriptEngineFactory, initialSettings
   }
   def translateEnclosingClass(n: String) = symbolOfTerm(n).enclClass.toOption map flatPath
 
-  private class TranslatingClassLoader(parent: ClassLoader) extends util.AbstractFileClassLoader(replOutput.dir, parent) {
+  class TranslatingClassLoader(parent: ClassLoader) extends util.AbstractFileClassLoader(replOutput.dir, parent) {
     /** Overridden here to try translating a simple name to the generated
       *  class name if the original attempt fails.  This method is used by
       *  getResourceAsStream as well as findClass.

@@ -332,7 +332,7 @@ import org.apache.spark.util.Utils
       updateCompilerClassPath(urls: _*)           // Add jars/classes to compile time for compiling
     }
 
-    protected def updateCompilerClassPath(urls: URL*): Unit = {
+    def updateCompilerClassPath(urls: URL*): Unit = {
       require(!global.forMSIL) // Only support JavaPlatform
 
       val platform = global.platform.asInstanceOf[JavaPlatform]
