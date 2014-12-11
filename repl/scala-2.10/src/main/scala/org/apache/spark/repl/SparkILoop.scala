@@ -81,7 +81,7 @@ class SparkILoop(in0: Option[BufferedReader], protected val out: JPrintWriter,
    *  I'm trying to work around it by moving operations into a class from
    *  which it will appear a stable prefix.
    */
-  private def onIntp[T](f: SparkIMain => T): T = f(intp)
+   def onIntp[T](f: SparkIMain => T): T = f(intp)
 
   class IMainOps[T <: SparkIMain](val intp: T) {
     import intp._
@@ -1107,7 +1107,7 @@ class SparkILoop(in0: Option[BufferedReader], protected val out: JPrintWriter,
     sparkContext
   }
 
-  private def getMaster(): String = {
+   def getMaster(): String = {
     val master = this.master match {
       case Some(m) => m
       case None =>
@@ -1141,7 +1141,7 @@ object SparkILoop {
   implicit val ec = scala.concurrent.ExecutionContext.Implicits.global
 
   implicit def loopToInterpreter(repl: SparkILoop): SparkIMain = repl.intp
-  private def echo(msg: String) = Console println msg
+   def echo(msg: String) = Console println msg
 
   def getAddedJars: Array[String] = {
     val envJars = sys.env.get("ADD_JARS")
