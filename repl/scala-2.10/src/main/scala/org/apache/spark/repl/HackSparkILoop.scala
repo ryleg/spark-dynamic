@@ -6,8 +6,8 @@ import scala.tools.nsc.interpreter.{JPrintWriter, _}
 import scala.tools.nsc.util.ScalaClassLoader._
 import scala.tools.nsc.{Settings, io}
 
-class HackSparkILoop(out:JPrintWriter) extends SparkILoop(None, out, None) { 
-  def getMaster(): String = {
+class HackSparkILoop(out:JPrintWriter) extends SparkILoop(None, out, None) {
+  override def getMaster(): String = {
     val master = this.master match {
       case Some(m) => m
       case None =>
@@ -18,7 +18,7 @@ class HackSparkILoop(out:JPrintWriter) extends SparkILoop(None, out, None) {
     master
   }
 
-  def tagOfStaticClass[T: ClassTag]: u.TypeTag[T] =
+  override def tagOfStaticClass[T: ClassTag]: u.TypeTag[T] =
     u.TypeTag[T](
       m,
       new TypeCreator {
