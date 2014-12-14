@@ -357,24 +357,44 @@ private[spark] class Executor(
    * Create a ClassLoader for use in tasks, adding any JARs specified by the user or any classes
    * created by the interpreter to the search path
    */
-  private def createDynamicClassLoader(userUri: String): MutableURLClassLoader = {
+  def createDynamicClassLoader(userUri: String): MutableURLClassLoader = {
     val currentLoader = Utils.getSparkClassLoader
 
+    import scala.util.{Try, Success, Failure}
+ //   implicit val ec = scala.concurrent.ExecutionContext.Implicits.global
     val specialUrls =  Array(new java.net.URL(userUri))
+
+    logInfo(s"RYLE - ${specialUrls.toList} specialUrls" +
+      s" ${specialUrls.toList.map{_.getPath}}")
     // For each of the jars in the jarSet, add them to the class loader.
     // We assume each of the files has already been fetched.
     val usedUris = currentJars.keySet
     val urls = usedUris.map { uri =>
       new File(uri.split("/").last).toURI.toURL
-    }.toArray ++ specialUrls
-
-    logInfo("RYLE - urls for classloader " + urls.map{_.getPath}.toList)
-
+    }.toArray
     val userClassPathFirst = conf.getBoolean("spark.files.userClassPathFirst", false)
-    userClassPathFirst match {
-      case true => new ChildExecutorURLClassLoader(urls, currentLoader)
-      case false => new ExecutorURLClassLoader(urls, currentLoader)
+
+    val allUrls = urls ++ specialUrls
+    val attempt = Try {
+      logInfo("RYLE - urls for classloader " + urls.map {
+        _.getPath
+      }.toList)
+
+      userClassPathFirst match {
+        case true => new ChildExecutorURLClassLoader(allUrls, currentLoader)
+        case false => new ExecutorURLClassLoader(allUrls, currentLoader)
+      }
     }
+      attempt match {
+        case Success(x) => logInfo("RYLE - succeeded in loading url classloader"); x
+        case Failure(e) => logInfo("RYLE - failed in loading url classloader")
+          userClassPathFirst match {
+            case true => new ChildExecutorURLClassLoader(urls, currentLoader)
+            case false => new ExecutorURLClassLoader(urls, currentLoader)
+          }
+      }
+
+
   }
 
 
