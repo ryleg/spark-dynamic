@@ -360,7 +360,7 @@ private[spark] class Executor(
   private def createDynamicClassLoader(userUri: String): MutableURLClassLoader = {
     val currentLoader = Utils.getSparkClassLoader
 
-    val specialUrls =  Array(new File(userUri.split("/").last).toURI.toURL)
+    val specialUrls =  Array(new File(userUri).toURI.toURL)
     // For each of the jars in the jarSet, add them to the class loader.
     // We assume each of the files has already been fetched.
     val usedUris = currentJars.keySet
@@ -368,7 +368,7 @@ private[spark] class Executor(
       new File(uri.split("/").last).toURI.toURL
     }.toArray ++ specialUrls
 
-    logInfo("RYLE - urls for classloader " + urls)
+    logInfo("RYLE - urls for classloader " + urls.map{_.getPath}.toList)
 
     val userClassPathFirst = conf.getBoolean("spark.files.userClassPathFirst", false)
     userClassPathFirst match {
