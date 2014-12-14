@@ -357,15 +357,19 @@ private[spark] class Executor(
    * Create a ClassLoader for use in tasks, adding any JARs specified by the user or any classes
    * created by the interpreter to the search path
    */
-  private def createDynamicClassLoader(uri: String): MutableURLClassLoader = {
+  private def createDynamicClassLoader(userUri: String): MutableURLClassLoader = {
     val currentLoader = Utils.getSparkClassLoader
 
+    val specialUrls =  Array(new File(userUri.split("/").last).toURI.toURL)
     // For each of the jars in the jarSet, add them to the class loader.
     // We assume each of the files has already been fetched.
-    val usedUris = currentJars.keySet + uri
+    val usedUris = currentJars.keySet
     val urls = usedUris.map { uri =>
       new File(uri.split("/").last).toURI.toURL
-    }.toArray
+    }.toArray ++ specialUrls
+
+    logInfo("RYLE - urls for classloader " + urls)
+
     val userClassPathFirst = conf.getBoolean("spark.files.userClassPathFirst", false)
     userClassPathFirst match {
       case true => new ChildExecutorURLClassLoader(urls, currentLoader)
