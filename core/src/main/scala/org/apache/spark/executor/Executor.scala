@@ -22,6 +22,8 @@ import java.lang.management.ManagementFactory
 import java.nio.ByteBuffer
 import java.util.concurrent._
 
+import org.apache.spark.serializer.SerializerInstance
+
 import scala.collection.JavaConversions._
 import scala.collection.mutable.{ArrayBuffer, HashMap}
 import scala.util.control.NonFatal
@@ -110,6 +112,13 @@ private[spark] class Executor(
   // Set the classloader for serializer
   env.serializer.setDefaultClassLoader(urlClassLoader)
 
+  def makeSerializer(classLoader : MutableURLClassLoader) = {
+    env.serializer.setDefaultClassLoader(classLoader).newInstance()
+//    val seric = env.closureSerializer.newInstance()
+  }
+
+  val serMap = scala.collection.mutable.Map[String, SerializerInstance]()
+
   // Akka's message frame size. If task result is bigger than this, we use the block manager
   // to send the result back.
   private val akkaFrameSize = AkkaUtils.maxFrameSizeBytes(conf)
@@ -148,6 +157,7 @@ private[spark] class Executor(
       env.stop()
     }
   }
+  val activeBaseClassLoaders = scala.collection.mutable.Map[String, MutableURLClassLoader]()
 
    val activeClassLoaders = scala.collection.mutable.Map[String, ClassLoader]()
 //  @volatile val activeMutableClassLoaders
@@ -197,6 +207,8 @@ private[spark] class Executor(
 
       val attemptedParse = tryParseSerializedThreadLocalProperties(taskName)
 
+      var resultSer : SerializerInstance = null
+
       val actualUsedClassLoader = attemptedParse match {
         case Some((threadLocalProperties, poolName)) =>
           val jarPath = threadLocalProperties.get("spark.dynamic.jarPath")
@@ -208,12 +220,16 @@ private[spark] class Executor(
             val thisReplCL =  activeClassLoaders.get(keyCL) match{
               case Some(replCL) =>
                 logInfo(s"RYLE - Found a pre-existing classloader under key: $keyCL")
+                resultSer = serMap.get(keyCL).get
                 replCL
               case None =>
                 logInfo(s"RYLE - Pre-existing classloader " +
                   s"not found under key: $keyCL" +
                 s"Creating new classloaders")
                 val thisCL = createDynamicClassLoader(actualJarPath)
+                activeBaseClassLoaders(keyCL) = thisCL
+                resultSer = makeSerializer(thisCL)
+                serMap(keyCL) = resultSer
               val replCL = addRestrictedReplClassLoaderIfNeeded(thisCL,
                 actualReplPath)
                 activeClassLoaders(keyCL) = replCL
@@ -271,7 +287,7 @@ private[spark] class Executor(
           throw new TaskKilledException
         }
 
-        val resultSer = SparkEnv.get.serializer.newInstance()
+        if (resultSer == null) resultSer = SparkEnv.get.serializer.newInstance()
         val beforeSerialization = System.currentTimeMillis()
         val valueBytes = resultSer.serialize(value)
         val afterSerialization = System.currentTimeMillis()
@@ -362,7 +378,7 @@ private[spark] class Executor(
 
     import scala.util.{Try, Success, Failure}
  //   implicit val ec = scala.concurrent.ExecutionContext.Implicits.global
-    val specialUrls =  Array(new java.net.URL(userUri))
+    val specialUrls =  Array(new File(userUri).toURI.toURL)
 
     logInfo(s"RYLE - ${specialUrls.toList} specialUrls" +
       s" ${specialUrls.toList.map{_.getPath}}")
