@@ -216,6 +216,7 @@ private[spark] class Executor(
                 val thisCL = createDynamicClassLoader(actualJarPath)
               val replCL = addRestrictedReplClassLoaderIfNeeded(thisCL,
                 actualReplPath)
+                activeClassLoaders(keyCL) = replCL
                 replCL
 
             }
