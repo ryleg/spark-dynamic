@@ -19,7 +19,6 @@ package org.apache.spark
 
 import java.io.File
 import java.net.Socket
-import java.util.Properties
 
 import org.apache.spark.SparkEnv._
 
@@ -43,7 +42,6 @@ import org.apache.spark.shuffle.{ShuffleMemoryManager, ShuffleManager}
 import org.apache.spark.storage._
 import org.apache.spark.util.{AkkaUtils, Utils}
 
-import scala.util.Properties
 
 /**
  * :: DeveloperApi ::
@@ -103,8 +101,9 @@ class SparkEnv (
     instantiateClass[T](conf.get(propertyName, defaultClassName))
   }
 
-  var localProperties = new InheritableThreadLocal[Properties] {
-    override protected def childValue(parent: Properties): Properties = new Properties(parent)
+  var localProperties = new InheritableThreadLocal[java.util.Properties] {
+    override protected def childValue(parent: java.util.Properties):
+    java.util.Properties = new java.util.Properties(parent)
   }
 
   var baseCL = Thread.currentThread().getContextClassLoader
@@ -440,7 +439,7 @@ object SparkEnv extends Logging {
       addedJars: Seq[String],
       addedFiles: Seq[String]): Map[String, Seq[(String, String)]] = {
 
-    import Properties._
+    import scala.util.Properties._
     val jvmInformation = Seq(
       ("Java Version", s"$javaVersion ($javaVendor)"),
       ("Java Home", javaHome),

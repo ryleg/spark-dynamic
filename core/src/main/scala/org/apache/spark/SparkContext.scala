@@ -383,8 +383,9 @@ class SparkContext(config: SparkConf) extends Logging {
   private[spark] var checkpointDir: Option[String] = None
 
   // Thread Local variable that can be used by users to pass information down the stack
-  val localProperties = new InheritableThreadLocal[Properties] {
-    override protected def childValue(parent: Properties): Properties = new Properties(parent)
+  val localProperties = new InheritableThreadLocal[java.util.Properties] {
+    override protected def childValue(parent: java.util.Properties):
+    java.util.Properties = new java.util.Properties(parent)
   }
 
   /**
