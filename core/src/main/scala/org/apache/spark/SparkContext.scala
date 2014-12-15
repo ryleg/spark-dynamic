@@ -227,7 +227,7 @@ class SparkContext(config: SparkConf) extends Logging {
   conf.set("spark.executor.id", "driver")
 
   // Create the Spark execution environment (cache, map output tracker, etc)
-  val env = SparkEnv.createDriverEnv(conf, isLocal, listenerBus)
+  val env = SparkEnv.createDriverEnv(conf, isLocal, listenerBus, this)
   SparkEnv.set(env)
 
   // Used to store a URL for each static file/jar together with the file's local timestamp
@@ -410,9 +410,9 @@ class SparkContext(config: SparkConf) extends Logging {
     }
   }
 
-  private[spark] def getLocalProperties: Properties = localProperties.get()
+  def getLocalProperties: Properties = localProperties.get()
 
-  private[spark] def setLocalProperties(props: Properties) {
+def setLocalProperties(props: Properties) {
     localProperties.set(props)
   }
 
@@ -429,7 +429,6 @@ class SparkContext(config: SparkConf) extends Logging {
   var userId = 1
 
   def setLocalProperty(key: String, value: String) {
-
     if (localProperties.get() == null) {
       localProperties.set(new Properties())
     }
@@ -439,6 +438,8 @@ class SparkContext(config: SparkConf) extends Logging {
       localProperties.get.setProperty(key, value)
     }
     SparkContext.localProperties(userId) = localProperties
+    env.localProperties = localProperties
+
 
   }
 
@@ -1520,6 +1521,7 @@ class SparkContext(config: SparkConf) extends Logging {
 object SparkContext extends Logging {
 
   var localProperties = scala.collection.mutable.Map[Int, InheritableThreadLocal[Properties]]()
+  var classLoaders = scala.collection.mutable.Map[Int, ClassLoader]()
 
   /**
    * Lock that guards access to global variables that track SparkContext construction.

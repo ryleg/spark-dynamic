@@ -19,6 +19,7 @@ package org.apache.spark
 
 import java.io.File
 import java.net.Socket
+import java.util.Properties
 
 import org.apache.spark.SparkEnv._
 
@@ -41,6 +42,8 @@ import org.apache.spark.serializer.Serializer
 import org.apache.spark.shuffle.{ShuffleMemoryManager, ShuffleManager}
 import org.apache.spark.storage._
 import org.apache.spark.util.{AkkaUtils, Utils}
+
+import scala.util.Properties
 
 /**
  * :: DeveloperApi ::
@@ -68,7 +71,8 @@ class SparkEnv (
     val metricsSystem: MetricsSystem,
     val shuffleMemoryManager: ShuffleMemoryManager,
     val conf: SparkConf,
-                 val isDriver: Boolean
+                 val isDriver: Boolean,
+        var sc: Option[SparkContext] = None
                  ) extends Logging {
 
 
@@ -99,6 +103,18 @@ class SparkEnv (
     instantiateClass[T](conf.get(propertyName, defaultClassName))
   }
 
+  var localProperties = new InheritableThreadLocal[Properties] {
+    override protected def childValue(parent: Properties): Properties = new Properties(parent)
+  }
+
+  var baseCL = Thread.currentThread().getContextClassLoader
+
+  def getClassLoader = {
+     sc.map{sci =>
+      SparkContext.classLoaders.get(sci.getLocalProperty("userId").toInt
+      ).getOrElse(baseCL)}.getOrElse(baseCL)
+  }
+
   var userClassLoader : ClassLoader =
     Thread.currentThread().getContextClassLoader
 /*
@@ -112,7 +128,7 @@ class SparkEnv (
     instantiateClassFromConf[Serializer](
       "spark.serializer",
       "org.apache.spark.serializer.JavaSerializer"
-    ).setDefaultClassLoader(userClassLoader)
+    ).setDefaultClassLoader(getClassLoader)
 
  //   logDebug(s"Using serializer: ${serializer.getClass}")
   }
@@ -121,7 +137,7 @@ class SparkEnv (
     instantiateClassFromConf[Serializer](
       "spark.closure.serializer",
       "org.apache.spark.serializer.JavaSerializer"
-    ).setDefaultClassLoader(userClassLoader)
+    ).setDefaultClassLoader(getClassLoader)
   }
 
   var userId = 1
@@ -208,12 +224,12 @@ object SparkEnv extends Logging {
   private[spark] def createDriverEnv(
       conf: SparkConf,
       isLocal: Boolean,
-      listenerBus: LiveListenerBus): SparkEnv = {
+      listenerBus: LiveListenerBus, sc: SparkContext): SparkEnv = {
     assert(conf.contains("spark.driver.host"), "spark.driver.host is not set on the driver!")
     assert(conf.contains("spark.driver.port"), "spark.driver.port is not set on the driver!")
     val hostname = conf.get("spark.driver.host")
     val port = conf.get("spark.driver.port").toInt
-    create(conf, SparkContext.DRIVER_IDENTIFIER, hostname, port, true, isLocal, listenerBus)
+    create(conf, SparkContext.DRIVER_IDENTIFIER, hostname, port, true, isLocal, listenerBus, sc=Some(sc))
   }
 
   /**
@@ -244,7 +260,8 @@ object SparkEnv extends Logging {
       isLocal: Boolean,
       listenerBus: LiveListenerBus = null,
       defaultActorSystem: ActorSystem = null,
-      numUsableCores: Int = 0): SparkEnv = {
+      numUsableCores: Int = 0,
+                      sc: Option[SparkContext] = None): SparkEnv = {
 
     // Listener bus is only used on the driver
     if (isDriver) {
@@ -406,7 +423,8 @@ object SparkEnv extends Logging {
       metricsSystem,
       shuffleMemoryManager,
       conf,
-      isDriver
+      isDriver,
+    sc=sc
     )
   }
 
