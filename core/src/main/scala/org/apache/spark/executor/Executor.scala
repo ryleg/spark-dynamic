@@ -391,6 +391,7 @@ object TempExecutorStuff{
 
     logInfo(s"RYLE - ${specialUrls.toList} specialUrls" +
       s" ${specialUrls.toList.map{_.getPath}}")
+
     // For each of the jars in the jarSet, add them to the class loader.
     // We assume each of the files has already been fetched.
     val usedUris = currentJars.keySet
