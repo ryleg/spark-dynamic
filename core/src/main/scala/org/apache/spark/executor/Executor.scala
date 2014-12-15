@@ -231,7 +231,9 @@ object TempExecutorStuff{
                 s"Creating new classloaders")
                 val thisCL = createDynamicClassLoader(actualJarPath)
                 activeBaseClassLoaders(keyCL) = thisCL
-                (resultSer, closureSer) = makeSerializers(thisCL)
+                val (newResultSer, newClosureSer) = makeSerializers(thisCL)
+                resultSer = newResultSer
+                closureSer = newClosureSer
                 serMap(keyCL) = resultSer
                 closureSerMap(keyCL) = resultSer
               val replCL = addRestrictedReplClassLoaderIfNeeded(thisCL,
