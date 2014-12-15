@@ -387,7 +387,7 @@ object TempExecutorStuff{
 
     import scala.util.{Try, Success, Failure}
  //   implicit val ec = scala.concurrent.ExecutionContext.Implicits.global
-    val specialUrls =  Array(new File(userUri).toURI.toURL)
+    val specialUrls =  Array(new java.net.URL(userUri))
 
     logInfo(s"RYLE - ${specialUrls.toList} specialUrls" +
       s" ${specialUrls.toList.map{_.getPath}}")
