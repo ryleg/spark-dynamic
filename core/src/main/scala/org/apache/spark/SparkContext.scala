@@ -227,15 +227,15 @@ class SparkContext(config: SparkConf) extends Logging {
   conf.set("spark.executor.id", "driver")
 
   // Create the Spark execution environment (cache, map output tracker, etc)
-  private[spark] val env = SparkEnv.createDriverEnv(conf, isLocal, listenerBus)
+  val env = SparkEnv.createDriverEnv(conf, isLocal, listenerBus)
   SparkEnv.set(env)
 
   // Used to store a URL for each static file/jar together with the file's local timestamp
-  private[spark] val addedFiles = HashMap[String, Long]()
-  private[spark] val addedJars = HashMap[String, Long]()
+  val addedFiles = HashMap[String, Long]()
+  val addedJars = HashMap[String, Long]()
 
   // Keeps track of all persisted RDDs
-  private[spark] val persistentRdds = new TimeStampedWeakValueHashMap[Int, RDD[_]]
+  val persistentRdds = new TimeStampedWeakValueHashMap[Int, RDD[_]]
   private[spark] val metadataCleaner =
     new MetadataCleaner(MetadataCleanerType.SPARK_CONTEXT, this.cleanup, conf)
 
@@ -383,7 +383,7 @@ class SparkContext(config: SparkConf) extends Logging {
   private[spark] var checkpointDir: Option[String] = None
 
   // Thread Local variable that can be used by users to pass information down the stack
-  private val localProperties = new InheritableThreadLocal[Properties] {
+  val localProperties = new InheritableThreadLocal[Properties] {
     override protected def childValue(parent: Properties): Properties = new Properties(parent)
   }
 
@@ -425,7 +425,11 @@ class SparkContext(config: SparkConf) extends Logging {
    * Set a local property that affects jobs submitted from this thread, such as the
    * Spark fair scheduler pool.
    */
+
+  var userId = 1
+
   def setLocalProperty(key: String, value: String) {
+
     if (localProperties.get() == null) {
       localProperties.set(new Properties())
     }
@@ -434,6 +438,8 @@ class SparkContext(config: SparkConf) extends Logging {
     } else {
       localProperties.get.setProperty(key, value)
     }
+    SparkContext.localProperties(userId) = localProperties
+
   }
 
   /**
@@ -1513,7 +1519,7 @@ class SparkContext(config: SparkConf) extends Logging {
  */
 object SparkContext extends Logging {
 
-
+  var localProperties = scala.collection.mutable.Map[Int, InheritableThreadLocal[Properties]]()
 
   /**
    * Lock that guards access to global variables that track SparkContext construction.

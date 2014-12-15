@@ -108,7 +108,7 @@ private[spark] abstract class Task[T](val stageId: Int, var partitionId: Int) ex
  * the task might depend on one of the JARs. Thus we serialize each task as multiple objects, by
  * first writing out its dependencies.
  */
-private[spark] object Task {
+object Task {
   /**
    * Serialize a task and the current app dependencies (files and JARs added to the SparkContext)
    */

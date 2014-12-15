@@ -26,15 +26,15 @@ import org.apache.spark.util.ParentClassLoader
  * We also make changes so user classes can come before the default classes.
  */
 
-private[spark] trait MutableURLClassLoader extends ClassLoader {
+ trait MutableURLClassLoader extends ClassLoader {
   def addURL(url: URL)
   def getURLs: Array[URL]
 }
 
-private[spark] class ChildExecutorURLClassLoader(urls: Array[URL], parent: ClassLoader)
+class ChildExecutorURLClassLoader(urls: Array[URL], parent: ClassLoader)
   extends MutableURLClassLoader {
 
-  private object userClassLoader extends URLClassLoader(urls, null){
+   object userClassLoader extends URLClassLoader(urls, null){
     override def addURL(url: URL) {
       super.addURL(url)
     }
@@ -43,7 +43,7 @@ private[spark] class ChildExecutorURLClassLoader(urls: Array[URL], parent: Class
     }
   }
 
-  private val parentClassLoader = new ParentClassLoader(parent)
+   val parentClassLoader = new ParentClassLoader(parent)
 
   override def findClass(name: String): Class[_] = {
     try {
@@ -64,7 +64,7 @@ private[spark] class ChildExecutorURLClassLoader(urls: Array[URL], parent: Class
   }
 }
 
-private[spark] class ExecutorURLClassLoader(urls: Array[URL], parent: ClassLoader)
+class ExecutorURLClassLoader(urls: Array[URL], parent: ClassLoader)
   extends URLClassLoader(urls, parent) with MutableURLClassLoader {
 
   override def addURL(url: URL) {

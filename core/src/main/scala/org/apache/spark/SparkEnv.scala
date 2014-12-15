@@ -20,6 +20,8 @@ package org.apache.spark
 import java.io.File
 import java.net.Socket
 
+import org.apache.spark.SparkEnv._
+
 import scala.collection.JavaConversions._
 import scala.collection.mutable
 import scala.util.Properties
@@ -54,8 +56,6 @@ import org.apache.spark.util.{AkkaUtils, Utils}
 class SparkEnv (
     val executorId: String,
     val actorSystem: ActorSystem,
-    val serializer: Serializer,
-    val closureSerializer: Serializer,
     val cacheManager: CacheManager,
     val mapOutputTracker: MapOutputTracker,
     val shuffleManager: ShuffleManager,
@@ -67,7 +67,59 @@ class SparkEnv (
     val sparkFilesDir: String,
     val metricsSystem: MetricsSystem,
     val shuffleMemoryManager: ShuffleMemoryManager,
-    val conf: SparkConf) extends Logging {
+    val conf: SparkConf,
+                 val isDriver: Boolean
+                 ) extends Logging {
+
+
+
+  // Create an instance of the class with the given name, possibly initializing it with our conf
+  def instantiateClass[T](className: String): T = {
+    val cls = Class.forName(className, true, Utils.getContextOrSparkClassLoader)
+    // Look for a constructor taking a SparkConf and a boolean isDriver, then one taking just
+    // SparkConf, then one taking no arguments
+    try {
+      cls.getConstructor(classOf[SparkConf], java.lang.Boolean.TYPE)
+        .newInstance(conf, new java.lang.Boolean(isDriver))
+        .asInstanceOf[T]
+    } catch {
+      case _: NoSuchMethodException =>
+        try {
+          cls.getConstructor(classOf[SparkConf]).newInstance(conf).asInstanceOf[T]
+        } catch {
+          case _: NoSuchMethodException =>
+            cls.getConstructor().newInstance().asInstanceOf[T]
+        }
+    }
+  }
+
+  // Create an instance of the class named by the given SparkConf property, or defaultClassName
+  // if the property is not set, possibly initializing it with our conf
+  def instantiateClassFromConf[T](propertyName: String, defaultClassName: String): T = {
+    instantiateClass[T](conf.get(propertyName, defaultClassName))
+  }
+
+  var userClassLoader : ClassLoader = Thread.currentThread().getContextClassLoader
+/*
+
+  def userClassLoader = {
+    SparkContext.localProperties.get(userId)
+  }
+*/
+
+  def serializer = {
+    instantiateClassFromConf[Serializer](
+      "spark.serializer", "org.apache.spark.serializer.JavaSerializer").setDefaultClassLoader(userClassLoader)
+
+ //   logDebug(s"Using serializer: ${serializer.getClass}")
+  }
+
+  def closureSerializer = {
+    instantiateClassFromConf[Serializer](
+      "spark.closure.serializer", "org.apache.spark.serializer.JavaSerializer").setDefaultClassLoader(userClassLoader)
+  }
+
+  var userId = 1
 
   private[spark] var isStopped = false
   private val pythonWorkers = mutable.HashMap[(String, Map[String, String]), PythonWorkerFactory]()
@@ -337,8 +389,6 @@ object SparkEnv extends Logging {
     new SparkEnv(
       executorId,
       actorSystem,
-      serializer,
-      closureSerializer,
       cacheManager,
       mapOutputTracker,
       shuffleManager,
@@ -350,7 +400,9 @@ object SparkEnv extends Logging {
       sparkFilesDir,
       metricsSystem,
       shuffleMemoryManager,
-      conf)
+      conf,
+      isDriver
+    )
   }
 
   /**

@@ -57,7 +57,7 @@ private[spark] object CallSite {
 /**
  * Various utility methods used by Spark.
  */
-private[spark] object Utils extends Logging {
+object Utils extends Logging {
   val random = new Random()
 
   /** Serialize an object using Java serialization */

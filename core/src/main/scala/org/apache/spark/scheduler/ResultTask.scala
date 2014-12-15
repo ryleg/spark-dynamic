@@ -39,7 +39,7 @@ import org.apache.spark.rdd.RDD
  * @param outputId index of the task in this job (a job can launch tasks on only a subset of the
  *                 input RDD's partitions).
  */
-private[spark] class ResultTask[T, U](
+class ResultTask[T, U](
     stageId: Int,
     taskBinary: Broadcast[Array[Byte]],
     partition: Partition,

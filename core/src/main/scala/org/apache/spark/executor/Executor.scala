@@ -45,7 +45,7 @@ object TempExecutorStuff{
  * Spark executor used with Mesos, YARN, and the standalone scheduler.
  * In coarse-grained mode, an existing actor system is provided.
  */
-private[spark] class Executor(
+ class Executor(
     executorId: String,
     slaveHostname: String,
     properties: Seq[(String, String)],
@@ -56,12 +56,12 @@ private[spark] class Executor(
 {
   // Application dependencies (added through SparkContext) that we've fetched so far on this node.
   // Each map holds the master's timestamp for the version of that file or JAR we got.
-  private val currentFiles: HashMap[String, Long] = new HashMap[String, Long]()
-  private val currentJars: HashMap[String, Long] = new HashMap[String, Long]()
+   val currentFiles: HashMap[String, Long] = new HashMap[String, Long]()
+   val currentJars: HashMap[String, Long] = new HashMap[String, Long]()
 
-  private val EMPTY_BYTE_BUFFER = ByteBuffer.wrap(new Array[Byte](0))
+   val EMPTY_BYTE_BUFFER = ByteBuffer.wrap(new Array[Byte](0))
 
-  @volatile private var isStopped = false
+  @volatile  var isStopped = false
 
   // No ip or host:port - just hostname
   Utils.checkHost(slaveHostname, "Expected executed slave to be a hostname")
@@ -86,7 +86,7 @@ private[spark] class Executor(
 
   // Initialize Spark environment (using system properties read above)
   conf.set("spark.executor.id", executorId)
-  private val env = {
+   val env = {
     if (!isLocal) {
       val port = conf.getInt("spark.executor.port", 0)
       val _env = SparkEnv.createExecutorEnv(
@@ -101,36 +101,37 @@ private[spark] class Executor(
   }
 
   // Create an actor for receiving RPCs from the driver
-  private val executorActor = env.actorSystem.actorOf(
+   val executorActor = env.actorSystem.actorOf(
     Props(new ExecutorActor(executorId)), "ExecutorActor")
 
   // Create our ClassLoader
   // do this after SparkEnv creation so can access the SecurityManager
-  private val urlClassLoader = createClassLoader()
-  private val replClassLoader = addReplClassLoaderIfNeeded(urlClassLoader)
+   val urlClassLoader = createClassLoader()
+   val replClassLoader = addReplClassLoaderIfNeeded(urlClassLoader)
 
   // Set the classloader for serializer
   env.serializer.setDefaultClassLoader(urlClassLoader)
 
-  def makeSerializer(classLoader : MutableURLClassLoader) = {
-    env.serializer.setDefaultClassLoader(classLoader).newInstance()
-//    val seric = env.closureSerializer.newInstance()
+  def makeSerializers(classLoader : MutableURLClassLoader) = {
+    (env.serializer.setDefaultClassLoader(classLoader).newInstance(),
+    env.closureSerializer.setDefaultClassLoader(classLoader).newInstance())
   }
 
   val serMap = scala.collection.mutable.Map[String, SerializerInstance]()
+  val closureSerMap = scala.collection.mutable.Map[String, SerializerInstance]()
 
   // Akka's message frame size. If task result is bigger than this, we use the block manager
   // to send the result back.
-  private val akkaFrameSize = AkkaUtils.maxFrameSizeBytes(conf)
+   val akkaFrameSize = AkkaUtils.maxFrameSizeBytes(conf)
 
   // Limit of bytes for total size of results (default is 1GB)
-  private val maxResultSize = Utils.getMaxResultSize(conf)
+   val maxResultSize = Utils.getMaxResultSize(conf)
 
   // Start worker thread pool
   val threadPool = Utils.newDaemonCachedThreadPool("Executor task launch worker")
 
   // Maintains the list of running tasks.
-  private val runningTasks = new ConcurrentHashMap[Long, TaskRunner]
+   val runningTasks = new ConcurrentHashMap[Long, TaskRunner]
 
   startDriverHeartbeater()
 
@@ -168,7 +169,7 @@ private[spark] class Executor(
       execBackend: ExecutorBackend, val taskId: Long, taskName: String, serializedTask: ByteBuffer)
     extends Runnable {
 
-    @volatile private var killed = false
+    @volatile  var killed = false
     @volatile var task: Task[Any] = _
     @volatile var attemptedTask: Option[Task[Any]] = None
 
@@ -208,6 +209,7 @@ private[spark] class Executor(
       val attemptedParse = tryParseSerializedThreadLocalProperties(taskName)
 
       var resultSer : SerializerInstance = null
+      var closureSer : SerializerInstance = null
 
       val actualUsedClassLoader = attemptedParse match {
         case Some((threadLocalProperties, poolName)) =>
@@ -221,6 +223,7 @@ private[spark] class Executor(
               case Some(replCL) =>
                 logInfo(s"RYLE - Found a pre-existing classloader under key: $keyCL")
                 resultSer = serMap.get(keyCL).get
+                closureSer = closureSerMap.get(keyCL).get
                 replCL
               case None =>
                 logInfo(s"RYLE - Pre-existing classloader " +
@@ -228,8 +231,9 @@ private[spark] class Executor(
                 s"Creating new classloaders")
                 val thisCL = createDynamicClassLoader(actualJarPath)
                 activeBaseClassLoaders(keyCL) = thisCL
-                resultSer = makeSerializer(thisCL)
+                (resultSer, closureSer) = makeSerializers(thisCL)
                 serMap(keyCL) = resultSer
+                closureSerMap(keyCL) = resultSer
               val replCL = addRestrictedReplClassLoaderIfNeeded(thisCL,
                 actualReplPath)
                 activeClassLoaders(keyCL) = replCL
@@ -249,7 +253,10 @@ private[spark] class Executor(
 
       Thread.currentThread.setContextClassLoader(actualUsedClassLoader)
 
-      val ser = SparkEnv.get.closureSerializer.newInstance()
+      val ser = if (closureSer != null) closureSer else {
+        logWarning("RYLE - Not using dynamic serializer")
+        SparkEnv.get.closureSerializer.newInstance()
+      }
       logInfo(s"Running $taskName (TID $taskId)")
 
       execBackend.statusUpdate(taskId, TaskState.RUNNING, EMPTY_BYTE_BUFFER)
@@ -418,7 +425,7 @@ private[spark] class Executor(
    * Create a ClassLoader for use in tasks, adding any JARs specified by the user or any classes
    * created by the interpreter to the search path
    */
-  private def createClassLoader(): MutableURLClassLoader = {
+   def createClassLoader(): MutableURLClassLoader = {
     val currentLoader = Utils.getContextOrSparkClassLoader
 
     // For each of the jars in the jarSet, add them to the class loader.
@@ -434,7 +441,7 @@ private[spark] class Executor(
   }
 
 
-  private def addRestrictedReplClassLoaderIfNeeded(
+   def addRestrictedReplClassLoaderIfNeeded(
                                                     parent: ClassLoader,
                                                     classUri: String):
   ClassLoader = {
@@ -464,7 +471,7 @@ private[spark] class Executor(
    * If the REPL is in use, add another ClassLoader that will read
    * new classes defined by the REPL as the user types code
    */
-  private def addReplClassLoaderIfNeeded(parent: ClassLoader): ClassLoader = {
+   def addReplClassLoaderIfNeeded(parent: ClassLoader): ClassLoader = {
     val classUri = conf.get("spark.repl.class.uri", null)
     if (classUri != null) {
       logInfo("Using REPL class URI: " + classUri)
@@ -491,7 +498,7 @@ private[spark] class Executor(
    * Download any missing dependencies if we receive a new set of files and JARs from the
    * SparkContext. Also adds any new JARs we fetched to the class loader.
    */
-  private def updateDependencies(newFiles: HashMap[String, Long], newJars: HashMap[String, Long]) {
+   def updateDependencies(newFiles: HashMap[String, Long], newJars: HashMap[String, Long]) {
     val hadoopConf = SparkHadoopUtil.get.newConfiguration(conf)
     synchronized {
       // Fetch missing dependencies
