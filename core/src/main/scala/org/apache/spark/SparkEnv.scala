@@ -99,7 +99,8 @@ class SparkEnv (
     instantiateClass[T](conf.get(propertyName, defaultClassName))
   }
 
-  var userClassLoader : ClassLoader = Thread.currentThread().getContextClassLoader
+  var userClassLoader : ClassLoader =
+    Thread.currentThread().getContextClassLoader
 /*
 
   def userClassLoader = {
@@ -109,14 +110,18 @@ class SparkEnv (
 
   def serializer = {
     instantiateClassFromConf[Serializer](
-      "spark.serializer", "org.apache.spark.serializer.JavaSerializer").setDefaultClassLoader(userClassLoader)
+      "spark.serializer",
+      "org.apache.spark.serializer.JavaSerializer"
+    ).setDefaultClassLoader(userClassLoader)
 
  //   logDebug(s"Using serializer: ${serializer.getClass}")
   }
 
   def closureSerializer = {
     instantiateClassFromConf[Serializer](
-      "spark.closure.serializer", "org.apache.spark.serializer.JavaSerializer").setDefaultClassLoader(userClassLoader)
+      "spark.closure.serializer",
+      "org.apache.spark.serializer.JavaSerializer"
+    ).setDefaultClassLoader(userClassLoader)
   }
 
   var userId = 1
