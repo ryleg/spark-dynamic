@@ -110,11 +110,14 @@ class SparkEnv (
 
   def getClassLoader = {
      sc.map { sci =>
-       val maybeUserId = sci.getLocalProperty("userId")
-       if (maybeUserId == null) baseCL
-       else SparkContext.classLoaders.getOrElse(
-         maybeUserId.toInt, baseCL)
-     }.getOrElse(baseCL)
+       import scala.util.{Try, Success, Failure}
+       Try {
+         val maybeUserId = sci.getLocalProperty("userId")
+         if (maybeUserId == null) baseCL
+         else SparkContext.classLoaders.getOrElse(
+           maybeUserId.toInt, baseCL)
+       }.toOption.getOrElse(baseCL)
+       }.getOrElse(baseCL)
   }
 
   var userClassLoader : ClassLoader =

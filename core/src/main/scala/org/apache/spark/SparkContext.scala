@@ -66,6 +66,8 @@ import org.apache.spark.util._
  */
 class SparkContext(config: SparkConf) extends Logging {
 
+  SparkContext.ryleSC = this
+
   // The call site where this SparkContext was constructed.
   private val creationSite: CallSite = Utils.getCallSite()
 
@@ -322,12 +324,12 @@ class SparkContext(config: SparkConf) extends Logging {
     SparkContext.createTaskScheduler(this, master)
   private val heartbeatReceiver = env.actorSystem.actorOf(
     Props(new HeartbeatReceiver(taskScheduler)), "HeartbeatReceiver")
-  @volatile private[spark] var dagScheduler: DAGScheduler = _
+  @volatile var dagScheduler: DAGScheduler = _
   try {
     dagScheduler = new DAGScheduler(this)
   } catch {
-    case e: Exception => throw
-      new SparkException("DAGScheduler cannot be initialized due to %s".format(e.getMessage))
+    case e: Exception => e.printStackTrace(); //throw
+     // new SparkException("DAGScheduler cannot be initialized due to %s".format(e.getMessage))
   }
 
   // start TaskScheduler after taskScheduler sets DAGScheduler reference in DAGScheduler's
@@ -438,7 +440,7 @@ def setLocalProperties(props: Properties) {
     } else {
       localProperties.get.setProperty(key, value)
     }
-    SparkContext.localProperties(userId) = localProperties
+    SparkContext.userLocalProperties(userId) = localProperties
     env.localProperties = localProperties
 
 
@@ -1521,8 +1523,9 @@ def setLocalProperties(props: Properties) {
  */
 object SparkContext extends Logging {
 
-  var localProperties = scala.collection.mutable.Map[Int, InheritableThreadLocal[Properties]]()
+  var userLocalProperties = scala.collection.mutable.Map[Int, InheritableThreadLocal[Properties]]()
   var classLoaders = scala.collection.mutable.Map[Int, ClassLoader]()
+  var ryleSC : SparkContext = null
 
   /**
    * Lock that guards access to global variables that track SparkContext construction.
